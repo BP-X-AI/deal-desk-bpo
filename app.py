@@ -372,10 +372,14 @@ with tab_dre:
             st.download_button(t('down_xls'), data=oxl.getvalue(), file_name="DRE_Matrix.xlsx", mime="application/vnd.ms-excel", use_container_width=True)
         with cx2:
             def make_pdf():
-                p = FPDF(); p.add_page(); p.set_font("Arial", size=14, style='B'); p.cell(200, 10, "Executive Financial Cockpit", ln=True, align='C')
-                p.set_font("Arial", size=11); p.cell(200, 10, f"Vendor: {params['vendor']} | Volume: {params['sessions_month']} calls", ln=True)
-                return bytes(p.output())
-            st.download_button(t('down_pdf'), data=make_pdf(), file_name="P_L_Summary.pdf", mime="application/pdf", use_container_width=True)
+                p = FPDF()
+                p.add_page()
+                p.set_font("Arial", size=14, style='B')
+                p.cell(200, 10, "Executive Financial Cockpit", ln=True, align='C')
+                p.set_font("Arial", size=11)
+                p.cell(200, 10, f"Vendor: {params['vendor']} | Volume: {params['sessions_month']} calls", ln=True)
+                # Aqui está o pulo do gato: 'S' retorna o documento como uma string/bytes sem tentar salvar no disco
+                return p.output(dest='S').encode('latin-1')
 
 # ==========================================
 # MÓDULO 6: AI ADVISOR & PITCH
