@@ -53,10 +53,10 @@ DIC = {
 }
 def t(key): return DIC[st.session_state.lang].get(key, key)
 
-# CSS Material Design
+# CSS Material Design (ATUALIZADO COM UX FIX)
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
     .g-card { background-color: #ffffff; border: 1px solid #dadce0; border-radius: 8px; padding: 24px; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3); margin-bottom: 16px; }
     .g-label { color: #5f6368; font-size: 0.875rem; font-weight: 500; text-transform: uppercase; margin-bottom: 8px; }
@@ -65,7 +65,10 @@ st.markdown("""
     .g-delta-negative { color: #ea4335; font-size: 0.875rem; font-weight: 500; margin-top: 8px;}
     .g-delta-neutral { color: #5f6368; font-size: 0.875rem; font-weight: 500; margin-top: 8px;}
     .g-pitch-box { background-color: #e8f0fe; padding: 20px; border-radius: 8px; border-left: 4px solid #1a73e8; font-size: 1.05rem; color: #202124; line-height: 1.5; margin-bottom:15px;}
-    .kore-grid { font-size: 0.85rem; color: #5f6368; margin-bottom: 5px; font-weight: 500;}
+    
+    /* Novo estilo para os rótulos de SKUs - Material Design Grouping */
+    .sku-title { color: #1a73e8; font-size: 0.95rem; font-weight: 600; margin-top: 16px; margin-bottom: -15px; border-bottom: 1px solid #e8eaed; padding-bottom: 4px; }
+    .vendor-header { font-size: 1.1rem; font-weight: 600; color: #202124; margin-bottom: 8px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -96,14 +99,11 @@ def get_llm_cost_per_session(p):
 
 def get_platform_monthly_cost(p, monthly_ai_sessions):
     if p["vendor"] == "Kore.AI": 
-        # Multiplicador de Sessão (1 sessão a cada 15 min / 900s)
         sess_mult = math.ceil(p["aht_seconds"] / 900.0)
         net_session = p["k_ses_val"] * (1.0 - p["k_ses_desc"] / 100.0)
         net_gateway = p["k_gw_val"] * (1.0 - p["k_gw_desc"] / 100.0)
         net_support_mo = (p["k_sup_val"] * (1.0 - p["k_sup_desc"] / 100.0)) / 36.0
-        
         return (monthly_ai_sessions * sess_mult * net_session) + (monthly_ai_sessions * sess_mult * net_gateway) + net_support_mo
-        
     elif p["vendor"] == "Omilia": 
         return (monthly_ai_sessions * p["omilia_session"]) + p["omilia_rag_month"] + ((monthly_ai_sessions * (p["omilia_chars_per_session"]/1e6)) * p["omilia_tts_1m"])
     elif p["vendor"] == "Cresta": 
@@ -111,8 +111,7 @@ def get_platform_monthly_cost(p, monthly_ai_sessions):
     return 0.0
 
 def get_platform_capex_cost(p):
-    if p["vendor"] == "Kore.AI":
-        return p["k_exp_val"] * (1.0 - p["k_exp_desc"] / 100.0)
+    if p["vendor"] == "Kore.AI": return p["k_exp_val"] * (1.0 - p["k_exp_desc"] / 100.0)
     return 0.0
 
 def get_payback(savings_acum_array):
@@ -175,34 +174,43 @@ with tab_eng:
             t2_out = st.number_input("Out ($)", value=10.00, format="%.3f", key="i_t2_out")
 
     st.divider()
+    
+    # --- CORREÇÃO DE UX: MATERIAL DESIGN SKU LAYOUT ---
     v1, v2, v3 = st.columns(3)
     with v1:
-        st.markdown("**Kore.AI Enterprise SKUs**")
-        cx1, cx2 = st.columns(2)
-        st.markdown("<div class='kore-grid'>AI for Services</div>", unsafe_allow_html=True)
-        k_ses_val = cx1.number_input("Sessão ($)", value=0.116, format="%.3f", key="k_ses_v")
-        k_ses_desc = cx2.number_input("Desconto (%)", value=0.0, key="k_ses_d")
+        st.markdown("<div class='vendor-header'>Kore.AI Enterprise</div>", unsafe_allow_html=True)
         
-        st.markdown("<div class='kore-grid'>AI Gateway (TTS/ASR)</div>", unsafe_allow_html=True)
-        k_gw_val = cx1.number_input("Gateway ($)", value=0.050, format="%.3f", key="k_gw_v")
-        k_gw_desc = cx2.number_input("Desconto (%)", value=0.0, key="k_gw_d")
+        st.markdown("<div class='sku-title'>AI for Services</div>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        k_ses_val = c1.number_input("Sessão ($)", value=0.116, format="%.3f", key="k_ses_v")
+        k_ses_desc = c2.number_input("Desconto (%)", value=0.0, key="k_ses_d")
         
-        st.markdown("<div class='kore-grid'>Enterprise Support (3Y)</div>", unsafe_allow_html=True)
-        k_sup_val = cx1.number_input("Valor ($)", value=28000.0, key="k_sup_v")
-        k_sup_desc = cx2.number_input("Desconto (%)", value=0.0, key="k_sup_d")
+        st.markdown("<div class='sku-title'>AI Gateway (TTS/ASR)</div>", unsafe_allow_html=True)
+        c3, c4 = st.columns(2)
+        k_gw_val = c3.number_input("Gateway ($)", value=0.050, format="%.3f", key="k_gw_v")
+        k_gw_desc = c4.number_input("Desconto (%)", value=0.0, key="k_gw_d")
         
-        st.markdown("<div class='kore-grid'>Expert Services Standard</div>", unsafe_allow_html=True)
-        k_exp_val = cx1.number_input("Valor ($)", value=7000.0, key="k_exp_v")
-        k_exp_desc = cx2.number_input("Desconto (%)", value=0.0, key="k_exp_d")
+        st.markdown("<div class='sku-title'>Enterprise Support (3Y)</div>", unsafe_allow_html=True)
+        c5, c6 = st.columns(2)
+        k_sup_val = c5.number_input("Valor ($)", value=28000.0, key="k_sup_v")
+        k_sup_desc = c6.number_input("Desconto (%)", value=0.0, key="k_sup_d")
+        
+        st.markdown("<div class='sku-title'>Expert Services Standard</div>", unsafe_allow_html=True)
+        c7, c8 = st.columns(2)
+        k_exp_val = c7.number_input("Valor ($)", value=7000.0, key="k_exp_v")
+        k_exp_desc = c8.number_input("Desconto (%)", value=0.0, key="k_exp_d")
 
     with v2:
-        st.markdown("**Omilia**")
+        st.markdown("<div class='vendor-header'>Omilia</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sku-title'>Conversational Layer</div>", unsafe_allow_html=True)
         omilia_session = st.number_input("Call ($)", value=0.045, format="%.3f", key="i_o_s")
         omilia_rag_month = st.number_input("RAG/Mo ($)", value=750.0, key="i_o_rag")
         omilia_tts_1m = st.number_input("TTS/1M ($)", value=7.0, key="i_o_tts")
         omilia_chars_per_session = 3750
+
     with v3:
-        st.markdown("**Cresta**")
+        st.markdown("<div class='vendor-header'>Cresta</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sku-title'>Usage Licensing</div>", unsafe_allow_html=True)
         cresta_per_min = st.number_input("Min Price ($)", value=0.10, format="%.2f", key="i_c_pm")
         cresta_ai_mins = st.number_input("Mins/Session", value=5.0, key="i_c_am")
 
@@ -226,8 +234,7 @@ params = {
 
 # --- HASH CHECK PARA PREVENIR STALE DATA NO AI ADVISOR ---
 current_state_hash = hashlib.md5(json.dumps(params, sort_keys=True).encode('utf-8')).hexdigest()
-if 'last_params_hash' not in st.session_state:
-    st.session_state.last_params_hash = current_state_hash
+if 'last_params_hash' not in st.session_state: st.session_state.last_params_hash = current_state_hash
 
 if st.session_state.last_params_hash != current_state_hash:
     st.session_state.genai_pitch = None
@@ -240,7 +247,6 @@ with tab_vendor:
     st.markdown(f"<h3 style='color:#202124;'>{t('v_matrix')}</h3>", unsafe_allow_html=True)
     ai_vol_target = sessions_month * containment_mean
     
-    # QA FIX: Inversão do desempacotamento de dicionário para garantir precedência da chave "vendor"
     plat_k = get_platform_monthly_cost({**params, "vendor": "Kore.AI"}, ai_vol_target)
     plat_o = get_platform_monthly_cost({**params, "vendor": "Omilia"}, ai_vol_target)
     plat_c = get_platform_monthly_cost({**params, "vendor": "Cresta"}, ai_vol_target)
