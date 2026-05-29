@@ -9,210 +9,158 @@ import json
 import math
 from fpdf import FPDF
 
-# Configuração de Página
-st.set_page_config(page_title="IA Agent Deal Desk (Beta)", layout="wide", initial_sidebar_state="expanded")
+# Configuração de Página (Wide & Clean)
+st.set_page_config(page_title="IA Deal Desk (Beta)", layout="wide", initial_sidebar_state="expanded")
 
-# Inicialização de Estado (i18n e GenAI)
+# Inicialização de Estado
 if 'lang' not in st.session_state: st.session_state.lang = 'pt'
 if 'genai_pitch' not in st.session_state: st.session_state.genai_pitch = None
+if 'genai_alerts' not in st.session_state: st.session_state.genai_alerts = None
+if 'genai_impact' not in st.session_state: st.session_state.genai_impact = None
 
-# Dicionário de Traduções (i18n)
+# Dicionário de Traduções (QA Fix: 100% Mapeado)
 DIC = {
     'pt': {
-        'title': 'IA Agent Deal Desk (Beta)',
-        'tab1': '1️⃣ Configuração (Setup)', 'tab2': '🔍 Vendor Matrix', 'tab3': '🎯 Aprovação Executiva', 'tab4': '🧮 Cockpit DRE', 'tab5': '🤖 GenAI Advisor',
-        'op_vol': 'Operação & Volumetria', 'sessions': 'Sessões Mês (Volume)', 'aht': 'AHT Atual (seg)', 'rate': 'Blended Rate ($/h)', 'hours': 'Horas / Semana', 'inf': 'Dissídio Anual (%)',
-        'serv_cap': 'Serviços & CapEx', 'impl_mo': 'Meses Implantação', 'setup_cost': 'Custo Setup Interno ($)', 'setup_margin': 'Margem Setup (%)', 'maint_cost': 'Maint. Interna/Mês ($)', 'maint_margin': 'Margem Maint (%)',
-        'ai_eff': 'Eficiência AI', 'cont': 'Containment Alvo (%)', 'aht_over': 'Penalidade Transbordo (%)', 'copilot': 'Ativar Copilot', 'copilot_red': 'Redução Copilot (%)', 'copilot_cost': 'Licença Assist ($/FTE)',
-        'token': 'Roteamento Semântico (LLMs)', 'in_tok': 'In Tokens/Sessão', 'out_tok': 'Out Tokens/Sessão', 'cache': 'Cache Hit Rate (%)', 'v_base_sidebar': 'Vendor Oficial (Baseline)',
-        't1_split': 'Tráfego Tier 1 (Modelos Rápidos) %', 't1_label': 'Tier 1 (Ex: Flash, Haiku)', 't2_label': 'Tier 2 (Ex: Pro, GPT-4o)',
-        'com_mod': 'Modelos Comerciais', 'markup_lab': 'Markup Labor (%)', 'markup_tech': 'Markup s/ Tech (%)', 'gain_share': 'Gain-Share (%)', 'out_price': 'Ticket SaaS ($)',
-        'v_matrix': 'OpEx Matrix', 'strat': 'Estratégia de Negócio:',
-        'ebitda': 'EBITDA BPO (3A)', 'margin': 'Margem Operacional', 'sav': 'Net Savings Cliente (3A)', 'vs_leg': 'vs Legado', 'cash': 'Fluxo de Caixa',
-        'chart_title': 'Comparativo de EBITDA Acumulado', 'dre_res': 'DRE Resumida', 'rev': 'Faturamento Total', 'cost': 'Custos Totais', 'profit': 'EBITDA', 'cli_sav': 'Savings Cliente',
-        'cockpit_title': 'Cockpit Financeiro Executivo', 'sel_cenario': 'Selecione o cenário:', 'waterfall_title': 'Composição do EBITDA (Waterfall)', 'op_labor': 'Custos Laborais', 'op_tech': 'Custos Nuvem/Tech',
-        'dre_full': 'Matriz DRE Analítica', 'down_xls': '📊 Baixar Planilha (XLSX)', 'down_pdf': '📄 Baixar Report (PDF)',
-        'adv_title': 'GenAI Deal Advisor', 'adv_btn': '✨ Gerar Análise Arquitetural & Pitch', 'adv_warn': 'Gere a análise para obter os insights.'
+        'title': 'Agentic Deal Desk',
+        'tab1': '1️⃣ Key Drivers', 'tab2': '🔍 Vendor Matrix', 'tab3': '🎯 Radar Executivo', 'tab4': '🧮 DRE Cockpit', 'tab5': '🤖 GenAI Advisor',
+        'v_base_sidebar': 'Estratégia de Vendor', 'adv_btn': '✨ Gerar Análise Executiva',
+        'sel_kpi': 'Selecione o Cenário para Ver KPIs:', 'fin_cen': 'Cenário Financeiro:',
+        'wf_comp': 'Composição (Waterfall)', 'mat_ana': 'Matriz Analítica (3 Anos)',
+        'capex_eff': 'Eficiência CapEx', 'profit': 'EBITDA ($)', 'cli_sav': 'Savings Cliente ($)'
     },
     'en': {
-        'title': 'IA Agent Deal Desk (Beta)',
-        'tab1': '1️⃣ Configuration (Setup)', 'tab2': '🔍 Vendor Matrix', 'tab3': '🎯 Executive Approval', 'tab4': '🧮 P&L Cockpit', 'tab5': '🤖 GenAI Advisor',
-        'op_vol': 'Operation & Volume', 'sessions': 'Monthly Sessions', 'aht': 'Current AHT (sec)', 'rate': 'Blended Rate ($/h)', 'hours': 'Hours / Week', 'inf': 'Wage Inflation (%)',
-        'serv_cap': 'Services & CapEx', 'impl_mo': 'Implementation Mo.', 'setup_cost': 'Internal Setup Cost ($)', 'setup_margin': 'Setup Margin (%)', 'maint_cost': 'Maint. Cost/Mo ($)', 'maint_margin': 'Maint Margin (%)',
-        'ai_eff': 'AI Efficiency', 'cont': 'Target Containment (%)', 'aht_over': 'Overflow Penalty (%)', 'copilot': 'Enable Copilot', 'copilot_red': 'Copilot Reduction (%)', 'copilot_cost': 'Assist License ($/FTE)',
-        'token': 'Semantic Routing (LLMs)', 'in_tok': 'In Tokens/Session', 'out_tok': 'Out Tokens/Session', 'cache': 'Cache Hit Rate (%)', 'v_base_sidebar': 'Official Vendor (Baseline)',
-        't1_split': 'Tier 1 Traffic (Fast Models) %', 't1_label': 'Tier 1 (e.g. Flash, Haiku)', 't2_label': 'Tier 2 (e.g. Pro, GPT-4o)',
-        'com_mod': 'Commercial Models', 'markup_lab': 'Labor Markup (%)', 'markup_tech': 'Tech Markup (%)', 'gain_share': 'Gain-Share (%)', 'out_price': 'SaaS Ticket ($)',
-        'v_matrix': 'OpEx Matrix', 'strat': 'Business Strategy:',
-        'ebitda': 'BPO EBITDA (3Y)', 'margin': 'Operating Margin', 'sav': 'Client Net Savings (3Y)', 'vs_leg': 'vs Legacy', 'cash': 'Cash Flow',
-        'chart_title': 'Cumulative EBITDA Comparison', 'dre_res': 'Summarized P&L', 'rev': 'Total Revenue', 'cost': 'Total Costs', 'profit': 'EBITDA', 'cli_sav': 'Client Savings',
-        'cockpit_title': 'Executive Financial Cockpit', 'sel_cenario': 'Select scenario:', 'waterfall_title': 'EBITDA Composition (Waterfall)', 'op_labor': 'Labor Costs', 'op_tech': 'Cloud/Tech Costs',
-        'dre_full': 'Analytical P&L Matrix', 'down_xls': '📊 Download Spreadsheet', 'down_pdf': '📄 Download Report',
-        'adv_title': 'GenAI Deal Advisor', 'adv_btn': '✨ Generate Architectural Analysis & Pitch', 'adv_warn': 'Generate the analysis to get insights.'
+        'title': 'Agentic Deal Desk',
+        'tab1': '1️⃣ Key Drivers', 'tab2': '🔍 Vendor Matrix', 'tab3': '🎯 Executive Radar', 'tab4': '🧮 P&L Cockpit', 'tab5': '🤖 GenAI Advisor',
+        'v_base_sidebar': 'Vendor Strategy', 'adv_btn': '✨ Generate Executive Analysis',
+        'sel_kpi': 'Select Scenario to view KPIs:', 'fin_cen': 'Financial Scenario:',
+        'wf_comp': 'Composition (Waterfall)', 'mat_ana': 'Analytical Matrix (3 Years)',
+        'capex_eff': 'CapEx Efficiency', 'profit': 'EBITDA ($)', 'cli_sav': 'Client Savings ($)'
     }
 }
 def t(key): return DIC[st.session_state.lang].get(key, key)
 
-# CSS Material Design (ATUALIZADO COM UX FIX)
+# --- GOOGLE MATERIAL DESIGN CSS ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
-    .g-card { background-color: #ffffff; border: 1px solid #dadce0; border-radius: 8px; padding: 24px; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3); margin-bottom: 16px; }
-    .g-label { color: #5f6368; font-size: 0.875rem; font-weight: 500; text-transform: uppercase; margin-bottom: 8px; }
-    .g-value { color: #202124; font-size: 2.1rem; font-weight: 400; line-height: 1.2; }
-    .g-delta-positive { color: #1a73e8; font-size: 0.875rem; font-weight: 500; margin-top: 8px;}
-    .g-delta-negative { color: #ea4335; font-size: 0.875rem; font-weight: 500; margin-top: 8px;}
-    .g-delta-neutral { color: #5f6368; font-size: 0.875rem; font-weight: 500; margin-top: 8px;}
-    .g-pitch-box { background-color: #e8f0fe; padding: 20px; border-radius: 8px; border-left: 4px solid #1a73e8; font-size: 1.05rem; color: #202124; line-height: 1.5; margin-bottom:15px;}
+    @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Google Sans', sans-serif; }
     
-    /* Novo estilo para os rótulos de SKUs - Material Design Grouping */
+    .g-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: box-shadow 0.2s; margin-bottom: 16px;}
+    .g-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .g-label { color: #5f6368; font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .g-value { color: #202124; font-size: 2.2rem; font-weight: 500; line-height: 1.1; }
+    .g-sub { color: #5f6368; font-size: 0.9rem; margin-top: 8px; font-weight: 400;}
+    
+    .ai-impact { background: #e6f4ea; border-left: 4px solid #34a853; padding: 20px; border-radius: 8px; margin-bottom: 16px; color: #137333;}
+    .ai-alert { background: #fef7e0; border-left: 4px solid #fbbc04; padding: 20px; border-radius: 8px; margin-bottom: 16px; color: #b06000;}
+    .ai-pitch { background: #e8f0fe; border-left: 4px solid #1a73e8; padding: 20px; border-radius: 8px; margin-bottom: 16px; color: #174ea6; font-style: italic; font-size: 1.1rem;}
+    
+    .section-title { font-size: 1.2rem; color: #202124; font-weight: 500; margin-bottom: 16px; margin-top: 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;}
     .sku-title { color: #1a73e8; font-size: 0.95rem; font-weight: 600; margin-top: 16px; margin-bottom: -15px; border-bottom: 1px solid #e8eaed; padding-bottom: 4px; }
-    .vendor-header { font-size: 1.1rem; font-weight: 600; color: #202124; margin-bottom: 8px; }
     </style>
 """, unsafe_allow_html=True)
 
-# SIDEBAR (Global Vendor Selection)
+# SIDEBAR
 with st.sidebar:
     st.markdown(f"### ⚙️ {t('v_base_sidebar')}")
     vendor_global = st.selectbox("", ["Kore.AI", "Omilia", "Cresta"], label_visibility="collapsed", key="v_glob")
+    st.caption("Altera toda a matriz de custos instantaneamente." if st.session_state.lang == 'pt' else "Instantly changes the entire cost matrix.")
 
 col_title, col_us, col_br = st.columns([10, 1, 1])
-with col_title: st.markdown(f"<h2 style='color: #202124; margin-bottom: 24px;'>{t('title')}</h2>", unsafe_allow_html=True)
+with col_title: st.markdown(f"<h2 style='color: #202124; margin-bottom: 24px; font-weight: 500;'>{t('title')}</h2>", unsafe_allow_html=True)
 with col_us: 
     if st.button("🇺🇸", key="btn_us"): st.session_state.lang = 'en'; st.rerun()
 with col_br: 
     if st.button("🇧🇷", key="btn_br"): st.session_state.lang = 'pt'; st.rerun()
 
 # ==========================================
-# MÓDULO 1: MOTORES DE CÁLCULO CORE
-# ==========================================
-def get_llm_cost_per_session(p):
-    if p.get("vendor") != "Kore.AI": return 0.0
-    c_t1 = (((p["input_tokens"] * p["cache_hit_rate"]) / 1e6 * p["t1_in_c"]) +
-            ((p["input_tokens"] * (1.0 - p["cache_hit_rate"])) / 1e6 * p["t1_in_nc"]) +
-            (p["output_tokens"] / 1e6 * p["t1_out"]))
-    c_t2 = (((p["input_tokens"] * p["cache_hit_rate"]) / 1e6 * p["t2_in_c"]) +
-            ((p["input_tokens"] * (1.0 - p["cache_hit_rate"])) / 1e6 * p["t2_in_nc"]) +
-            (p["output_tokens"] / 1e6 * p["t2_out"]))
-    return (p["t1_split"] * c_t1) + ((1.0 - p["t1_split"]) * c_t2)
-
-def get_platform_monthly_cost(p, monthly_ai_sessions):
-    if p["vendor"] == "Kore.AI": 
-        sess_mult = math.ceil(p["aht_seconds"] / 900.0)
-        net_session = p["k_ses_val"] * (1.0 - p["k_ses_desc"] / 100.0)
-        net_gateway = p["k_gw_val"] * (1.0 - p["k_gw_desc"] / 100.0)
-        net_support_mo = (p["k_sup_val"] * (1.0 - p["k_sup_desc"] / 100.0)) / 36.0
-        return (monthly_ai_sessions * sess_mult * net_session) + (monthly_ai_sessions * sess_mult * net_gateway) + net_support_mo
-    elif p["vendor"] == "Omilia": 
-        return (monthly_ai_sessions * p["omilia_session"]) + p["omilia_rag_month"] + ((monthly_ai_sessions * (p["omilia_chars_per_session"]/1e6)) * p["omilia_tts_1m"])
-    elif p["vendor"] == "Cresta": 
-        return monthly_ai_sessions * p["cresta_ai_mins"] * p["cresta_per_min"]
-    return 0.0
-
-def get_platform_capex_cost(p):
-    if p["vendor"] == "Kore.AI": return p["k_exp_val"] * (1.0 - p["k_exp_desc"] / 100.0)
-    return 0.0
-
-def get_payback(savings_acum_array):
-    pos_idx = np.where(savings_acum_array > 0)[0]
-    return int(pos_idx[0] + 1) if len(pos_idx) > 0 else 99
-
-# ==========================================
-# MÓDULO 2: ENGENHARIA DE VALOR (UI)
+# MÓDULO 1 & 2: ENGINE & PROGRESSIVE DISCLOSURE
 # ==========================================
 tab_eng, tab_vendor, tab_dash, tab_dre, tab_advisor = st.tabs([t('tab1'), t('tab2'), t('tab3'), t('tab4'), t('tab5')])
 
 with tab_eng:
-    col_in1, col_in2, col_in3 = st.columns(3)
-    with col_in1:
-        st.markdown(f"#### 💼 {t('op_vol')}")
-        sessions_month = st.number_input(t('sessions'), 1, value=30000, step=1000, key="i_sess")
-        aht_seconds = st.number_input(t('aht'), 1, value=750, step=10, key="i_aht")
-        agent_cost_hr = st.number_input(t('rate'), 0.1, value=3.45, step=0.1, key="i_rate")
-        productive_hours_week = st.number_input(t('hours'), 1.0, value=40.0, step=1.0, key="i_hrs")
-        fte_inflation_rate = st.number_input(t('inf'), value=5.0, key="i_inf") / 100.0
-        st.markdown(f"#### 🔧 {t('serv_cap')}")
-        implementation_months = st.number_input(t('impl_mo'), 0, 36, value=6, key="i_impl")
-        setup_cost_internal = st.number_input(t('setup_cost'), 0.0, value=35714.0, key="i_setup_c")
-        setup_fee = setup_cost_internal * (1.0 + (st.number_input(t('setup_margin'), value=40.0, key="i_setup_m") / 100.0))
-        maint_cost_internal = st.number_input(t('maint_cost'), 0.0, value=3385.0, key="i_maint_c")
-        maint_fee_month = maint_cost_internal * (1.0 + (st.number_input(t('maint_margin'), value=47.7, key="i_maint_m")/100.0))
-        
-    with col_in2:
-        st.markdown(f"#### 🤖 {t('ai_eff')}")
-        containment_mean = st.slider(t('cont'), 0, 100, 35, key="i_cont") / 100.0
-        aht_overflow_variation = st.slider(t('aht_over'), 0, 50, 15, key="i_aht_o") / 100.0
-        use_agent_assist = st.toggle(t('copilot'), key="i_use_aa")
-        agent_assist_reduction = st.slider(t('copilot_red'), 0, 50, 20, key="i_aa_red") / 100.0 if use_agent_assist else 0.0
-        agent_assist_cost_fte = st.number_input(t('copilot_cost'), 0.0, value=40.0, key="i_aa_c") if use_agent_assist else 0.0
-        
-        st.markdown(f"#### 💰 {t('com_mod')}")
-        bpo_markup = st.number_input(t('markup_lab'), value=30.0, key="i_mk_lab") / 100.0
-        tech_markup = st.number_input(t('markup_tech'), value=10.0, key="i_mk_tch") / 100.0
-        bpo_gain_share = st.number_input(t('gain_share'), value=40.0, key="i_gs") / 100.0
-        outcome_price = st.number_input(t('out_price'), 0.01, value=1.20, key="i_out_p")
-
-    with col_in3:
-        st.markdown(f"#### ☁️ {t('token')} 2.0")
-        st.info("Valores aplicáveis apenas ao cenário Kore.AI." if st.session_state.lang == 'pt' else "Values applicable only to Kore.AI scenario.")
-        input_tokens = st.number_input(t('in_tok'), 100, value=50000, key="i_in_t")
-        output_tokens = st.number_input(t('out_tok'), 100, value=1000, key="i_out_t")
-        cache_hit_rate = st.slider(t('cache'), 0, 100, 50, key="i_chr") / 100.0
-        t1_split = st.slider(t('t1_split'), 0, 100, 70, key="i_t1_s") / 100.0
-        
-        c_llm1, c_llm2 = st.columns(2)
-        with c_llm1:
-            st.caption(f"**{t('t1_label')}**")
-            t1_in_c = st.number_input("In Cache ($)", value=0.02, format="%.3f", key="i_t1_in_c")
-            t1_in_nc = st.number_input("In Non-C ($)", value=0.08, format="%.3f", key="i_t1_in_nc")
-            t1_out = st.number_input("Out ($)", value=0.30, format="%.3f", key="i_t1_out")
-        with c_llm2:
-            st.caption(f"**{t('t2_label')}**")
-            t2_in_c = st.number_input("In Cache ($)", value=1.25, format="%.3f", key="i_t2_in_c")
-            t2_in_nc = st.number_input("In Non-C ($)", value=2.50, format="%.3f", key="i_t2_in_nc")
-            t2_out = st.number_input("Out ($)", value=10.00, format="%.3f", key="i_t2_out")
-
-    st.divider()
+    st.markdown("<div class='section-title'>🎯 Key Value Drivers</div>", unsafe_allow_html=True)
     
-    # --- CORREÇÃO DE UX: MATERIAL DESIGN SKU LAYOUT ---
-    v1, v2, v3 = st.columns(3)
-    with v1:
-        st.markdown("<div class='vendor-header'>Kore.AI Enterprise</div>", unsafe_allow_html=True)
-        
-        st.markdown("<div class='sku-title'>AI for Services</div>", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        k_ses_val = c1.number_input("Sessão ($)", value=0.116, format="%.3f", key="k_ses_v")
-        k_ses_desc = c2.number_input("Desconto (%)", value=0.0, key="k_ses_d")
-        
-        st.markdown("<div class='sku-title'>AI Gateway (TTS/ASR)</div>", unsafe_allow_html=True)
-        c3, c4 = st.columns(2)
-        k_gw_val = c3.number_input("Gateway ($)", value=0.050, format="%.3f", key="k_gw_v")
-        k_gw_desc = c4.number_input("Desconto (%)", value=0.0, key="k_gw_d")
-        
-        st.markdown("<div class='sku-title'>Enterprise Support (3Y)</div>", unsafe_allow_html=True)
-        c5, c6 = st.columns(2)
-        k_sup_val = c5.number_input("Valor ($)", value=28000.0, key="k_sup_v")
-        k_sup_desc = c6.number_input("Desconto (%)", value=0.0, key="k_sup_d")
-        
-        st.markdown("<div class='sku-title'>Expert Services Standard</div>", unsafe_allow_html=True)
-        c7, c8 = st.columns(2)
-        k_exp_val = c7.number_input("Valor ($)", value=7000.0, key="k_exp_v")
-        k_exp_desc = c8.number_input("Desconto (%)", value=0.0, key="k_exp_d")
+    c_kd1, c_kd2, c_kd3, c_kd4, c_kd5 = st.columns(5)
+    sessions_month = c_kd1.number_input("Volume", 1, value=30000, step=1000, key="i_sess")
+    aht_seconds = c_kd2.number_input("AHT (Seg/Sec)", 1, value=750, step=10, key="i_aht")
+    containment_mean = c_kd3.slider("Contenção/Containment", 0, 100, 35, key="i_cont", format="%d%%") / 100.0
+    agent_cost_hr = c_kd4.number_input("Blended Rate ($)", 0.1, value=3.45, step=0.1, key="i_rate")
+    implementation_months = c_kd5.number_input("Go-Live (Meses/Mo)", 0, 36, value=6, key="i_impl")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    with st.expander("⚙️ Advanced Settings (Tokenomics, Markups & SKUs)", expanded=False):
+        c_adv1, c_adv2, c_adv3 = st.columns(3)
+        with c_adv1:
+            st.markdown("**1. Setup & Maint. Internos**")
+            setup_cost_internal = st.number_input("Custo Setup ($)", 0.0, value=35714.0, key="i_setup_c")
+            setup_fee = setup_cost_internal * (1.0 + (st.number_input("Margem Setup (%)", value=40.0, key="i_setup_m") / 100.0))
+            maint_cost_internal = st.number_input("Maint. Mês ($)", 0.0, value=3385.0, key="i_maint_c")
+            maint_fee_month = maint_cost_internal * (1.0 + (st.number_input("Margem Maint (%)", value=47.7, key="i_maint_m")/100.0))
+            productive_hours_week = st.number_input("Horas/Semana", 1.0, value=40.0, step=1.0, key="i_hrs")
+            fte_inflation_rate = st.number_input("Dissídio (%)", value=5.0, key="i_inf") / 100.0
+            
+        with c_adv2:
+            st.markdown("**2. Modelos Comerciais & AI Ops**")
+            bpo_markup = st.number_input("Markup Labor (%)", value=30.0, key="i_mk_lab") / 100.0
+            tech_markup = st.number_input("Markup Tech (%)", value=10.0, key="i_mk_tch") / 100.0
+            bpo_gain_share = st.number_input("Gain-Share (%)", value=40.0, key="i_gs") / 100.0
+            outcome_price = st.number_input("Ticket SaaS ($)", 0.01, value=1.20, key="i_out_p")
+            aht_overflow_variation = st.number_input("Penalidade Transbordo (%)", value=15.0, key="i_aht_o") / 100.0
+            use_agent_assist = st.toggle("Ativar Copilot", key="i_use_aa")
+            agent_assist_reduction = st.number_input("Redução Copilot (%)", value=20.0, key="i_aa_red") / 100.0 if use_agent_assist else 0.0
+            agent_assist_cost_fte = st.number_input("Licença Assist ($/FTE)", value=40.0, key="i_aa_c") if use_agent_assist else 0.0
 
-    with v2:
-        st.markdown("<div class='vendor-header'>Omilia</div>", unsafe_allow_html=True)
-        st.markdown("<div class='sku-title'>Conversational Layer</div>", unsafe_allow_html=True)
-        omilia_session = st.number_input("Call ($)", value=0.045, format="%.3f", key="i_o_s")
-        omilia_rag_month = st.number_input("RAG/Mo ($)", value=750.0, key="i_o_rag")
-        omilia_tts_1m = st.number_input("TTS/1M ($)", value=7.0, key="i_o_tts")
-        omilia_chars_per_session = 3750
+        with c_adv3:
+            st.markdown("**3. Tokenomics & Routing**")
+            input_tokens = st.number_input("In Tokens", 100, value=50000, key="i_in_t")
+            output_tokens = st.number_input("Out Tokens", 100, value=1000, key="i_out_t")
+            cache_hit_rate = st.number_input("Cache Hit (%)", value=50.0, key="i_chr") / 100.0
+            t1_split = st.number_input("Trafego Tier 1 (%)", value=70.0, key="i_t1_s") / 100.0
+            
+            c_llm1, c_llm2 = st.columns(2)
+            with c_llm1:
+                st.caption("Tier 1 (Flash)")
+                t1_in_c = st.number_input("In Cache ($)", value=0.02, format="%.3f", key="i_t1_in_c")
+                t1_in_nc = st.number_input("In Non-C ($)", value=0.08, format="%.3f", key="i_t1_in_nc")
+                t1_out = st.number_input("Out ($)", value=0.30, format="%.3f", key="i_t1_out")
+            with c_llm2:
+                st.caption("Tier 2 (Pro)")
+                t2_in_c = st.number_input("In Cache ($)", value=1.25, format="%.3f", key="i_t2_in_c")
+                t2_in_nc = st.number_input("In Non-C ($)", value=2.50, format="%.3f", key="i_t2_in_nc")
+                t2_out = st.number_input("Out ($)", value=10.00, format="%.3f", key="i_t2_out")
 
-    with v3:
-        st.markdown("<div class='vendor-header'>Cresta</div>", unsafe_allow_html=True)
-        st.markdown("<div class='sku-title'>Usage Licensing</div>", unsafe_allow_html=True)
-        cresta_per_min = st.number_input("Min Price ($)", value=0.10, format="%.2f", key="i_c_pm")
-        cresta_ai_mins = st.number_input("Mins/Session", value=5.0, key="i_c_am")
+        st.divider()
+        st.markdown("**4. Vendor SKUs & Pricing**")
+        v1, v2, v3 = st.columns(3)
+        with v1:
+            st.markdown("<div class='sku-title'>Kore.AI: AI for Services</div>", unsafe_allow_html=True)
+            kx1, kx2 = st.columns(2)
+            k_ses_val = kx1.number_input("Sessão ($)", value=0.116, format="%.3f", key="k_ses_v")
+            k_ses_desc = kx2.number_input("Desc (%)", value=0.0, key="k_ses_d")
+            st.markdown("<div class='sku-title'>Kore.AI: Gateway (TTS/ASR)</div>", unsafe_allow_html=True)
+            kx3, kx4 = st.columns(2)
+            k_gw_val = kx3.number_input("Gateway ($)", value=0.050, format="%.3f", key="k_gw_v")
+            k_gw_desc = kx4.number_input("Desc (%)", value=0.0, key="k_gw_d")
+            st.markdown("<div class='sku-title'>Kore.AI: Enterprise Support</div>", unsafe_allow_html=True)
+            kx5, kx6 = st.columns(2)
+            k_sup_val = kx5.number_input("Valor 3Y ($)", value=28000.0, key="k_sup_v")
+            k_sup_desc = kx6.number_input("Desc (%)", value=0.0, key="k_sup_d")
+            st.markdown("<div class='sku-title'>Kore.AI: Expert Services</div>", unsafe_allow_html=True)
+            kx7, kx8 = st.columns(2)
+            k_exp_val = kx7.number_input("Valor ($)", value=7000.0, key="k_exp_v")
+            k_exp_desc = kx8.number_input("Desc (%)", value=0.0, key="k_exp_d")
+        with v2:
+            st.markdown("<div class='sku-title'>Omilia Layer</div>", unsafe_allow_html=True)
+            omilia_session = st.number_input("Call ($)", value=0.045, format="%.3f", key="i_o_s")
+            omilia_rag_month = st.number_input("RAG/Mo ($)", value=750.0, key="i_o_rag")
+            omilia_tts_1m = st.number_input("TTS/1M ($)", value=7.0, key="i_o_tts")
+            omilia_chars_per_session = 3750
+        with v3:
+            st.markdown("<div class='sku-title'>Cresta Usage</div>", unsafe_allow_html=True)
+            cresta_per_min = st.number_input("Min Price ($)", value=0.10, format="%.2f", key="i_c_pm")
+            cresta_ai_mins = st.number_input("Mins/Session", value=5.0, key="i_c_am")
 
 params = {
     "sessions_month": sessions_month, "aht_seconds": aht_seconds, "aht_std_dev": 50, "agent_cost_hr": agent_cost_hr,
@@ -232,33 +180,32 @@ params = {
     "cresta_per_min": cresta_per_min, "cresta_ai_mins": cresta_ai_mins
 }
 
-# --- HASH CHECK PARA PREVENIR STALE DATA NO AI ADVISOR ---
 current_state_hash = hashlib.md5(json.dumps(params, sort_keys=True).encode('utf-8')).hexdigest()
 if 'last_params_hash' not in st.session_state: st.session_state.last_params_hash = current_state_hash
-
 if st.session_state.last_params_hash != current_state_hash:
     st.session_state.genai_pitch = None
+    st.session_state.genai_impact = None
+    st.session_state.genai_alerts = None
     st.session_state.last_params_hash = current_state_hash
 
-# ==========================================
-# MÓDULO 3: VENDORS E SIMULAÇÃO CORE
-# ==========================================
-with tab_vendor:
-    st.markdown(f"<h3 style='color:#202124;'>{t('v_matrix')}</h3>", unsafe_allow_html=True)
-    ai_vol_target = sessions_month * containment_mean
-    
-    plat_k = get_platform_monthly_cost({**params, "vendor": "Kore.AI"}, ai_vol_target)
-    plat_o = get_platform_monthly_cost({**params, "vendor": "Omilia"}, ai_vol_target)
-    plat_c = get_platform_monthly_cost({**params, "vendor": "Cresta"}, ai_vol_target)
-    
-    llm_mensal_k = ai_vol_target * get_llm_cost_per_session({**params, "vendor": "Kore.AI"})
-    llm_mensal_o = 0.0
-    llm_mensal_c = 0.0
-    
-    vcol1, vcol2, vcol3 = st.columns(3)
-    with vcol1: st.markdown(f"<div class='g-card'><div class='g-label'>Kore.AI</div><div class='g-value'>${(plat_k + llm_mensal_k):,.2f}</div><div class='g-delta-neutral'>Platform: ${plat_k:,.0f} | LLM Tokens: ${llm_mensal_k:,.0f}</div></div>", unsafe_allow_html=True)
-    with vcol2: st.markdown(f"<div class='g-card'><div class='g-label'>Omilia</div><div class='g-value'>${(plat_o + llm_mensal_o):,.2f}</div><div class='g-delta-neutral'>Platform: ${plat_o:,.0f} | LLM Tokens: $0</div></div>", unsafe_allow_html=True)
-    with vcol3: st.markdown(f"<div class='g-card'><div class='g-label'>Cresta</div><div class='g-value'>${(plat_c + llm_mensal_c):,.2f}</div><div class='g-delta-neutral'>Platform: ${plat_c:,.0f} | LLM Tokens: $0</div></div>", unsafe_allow_html=True)
+def get_llm_cost_per_session(p):
+    if p.get("vendor") != "Kore.AI": return 0.0
+    c_t1 = (((p["input_tokens"] * p["cache_hit_rate"]) / 1e6 * p["t1_in_c"]) + ((p["input_tokens"] * (1.0 - p["cache_hit_rate"])) / 1e6 * p["t1_in_nc"]) + (p["output_tokens"] / 1e6 * p["t1_out"]))
+    c_t2 = (((p["input_tokens"] * p["cache_hit_rate"]) / 1e6 * p["t2_in_c"]) + ((p["input_tokens"] * (1.0 - p["cache_hit_rate"])) / 1e6 * p["t2_in_nc"]) + (p["output_tokens"] / 1e6 * p["t2_out"]))
+    return (p["t1_split"] * c_t1) + ((1.0 - p["t1_split"]) * c_t2)
+
+def get_platform_monthly_cost(p, monthly_ai_sessions):
+    if p["vendor"] == "Kore.AI": 
+        sess_mult = math.ceil(p["aht_seconds"] / 900.0)
+        return (monthly_ai_sessions * sess_mult * (p["k_ses_val"] * (1.0 - p["k_ses_desc"]/100.0))) + (monthly_ai_sessions * sess_mult * (p["k_gw_val"] * (1.0 - p["k_gw_desc"]/100.0))) + ((p["k_sup_val"] * (1.0 - p["k_sup_desc"]/100.0)) / 36.0)
+    elif p["vendor"] == "Omilia": return (monthly_ai_sessions * p["omilia_session"]) + p["omilia_rag_month"] + ((monthly_ai_sessions * (p["omilia_chars_per_session"]/1e6)) * p["omilia_tts_1m"])
+    elif p["vendor"] == "Cresta": return monthly_ai_sessions * p["cresta_ai_mins"] * p["cresta_per_min"]
+    return 0.0
+
+def get_platform_capex_cost(p): return p["k_exp_val"] * (1.0 - p["k_exp_desc"]/100.0) if p["vendor"] == "Kore.AI" else 0.0
+def get_payback(savings_acum_array):
+    pos_idx = np.where(savings_acum_array > 0)[0]
+    return int(pos_idx[0] + 1) if len(pos_idx) > 0 else 99
 
 @st.cache_data
 def run_deal_desk_simulation(p):
@@ -304,11 +251,9 @@ def run_deal_desk_simulation(p):
     
     faturamento_asis_cliente = p50_asis_mo * (1.0 + p["bpo_markup"])
     
-    # CENÁRIOS
     c1_faturamento_tech = bpo_custo_tech_mo * (1.0 + p["tech_markup"])
     c1_bpo_rev_mo = (p50_tobe_mo * (1.0 + p["bpo_markup"])) + (p["maint_fee_month"] * live_mask) + c1_faturamento_tech
     c1_bpo_cost_mo = bpo_custo_labor_array + bpo_custo_maint_mo + bpo_custo_tech_mo
-    
     client_setup_bill_c1 = p["setup_fee"] + (vendor_capex_cost * (1.0 + p["tech_markup"]))
     bpo_setup_cost_total = p["setup_cost_internal"] + vendor_capex_cost
     
@@ -318,7 +263,6 @@ def run_deal_desk_simulation(p):
     c1_cliente_tco = c1_bpo_rev_mo + np.array([client_setup_bill_c1 if m == 1 else 0.0 for m in meses])
     c1_monthly_savings = faturamento_asis_cliente - c1_cliente_tco
     c1_cliente_savings_acum = np.cumsum(c1_monthly_savings)
-    
     c1_cost_labor = np.sum(bpo_custo_labor_array) + np.sum(bpo_custo_maint_mo)
     c1_cost_tech = np.sum(bpo_custo_tech_mo) + bpo_setup_cost_total
     
@@ -335,7 +279,6 @@ def run_deal_desk_simulation(p):
     c3_bpo_rev_mo = (p50_tobe_mo * (1.0 + p["bpo_markup"])) + c3_outcome_rev_mo + (p["maint_fee_month"] * live_mask)
     c3_bpo_cost_mo = bpo_custo_labor_array + bpo_custo_maint_mo + bpo_custo_tech_mo
     c3_bpo_ebitda_mo = c3_bpo_rev_mo - c3_bpo_cost_mo
-    
     client_setup_bill_c3 = p["setup_fee"]
     c3_bpo_rev_total = np.sum(c3_bpo_rev_mo) + client_setup_bill_c3
     c3_bpo_ebitda_total = c3_bpo_rev_total - np.sum(c3_bpo_cost_mo) - bpo_setup_cost_total
@@ -361,183 +304,147 @@ sim = run_deal_desk_simulation(params)
 def calc_margin(ebitda, rev): return (ebitda / rev) * 100.0 if rev > 0 else 0.0
 
 # ==========================================
-# MÓDULO 4: DASHBOARDS (MATERIAL DESIGN)
+# MÓDULO 3: VENDOR MATRIX
 # ==========================================
-with tab_dash:
-    col_m, col_h = st.columns([1, 4])
-    with col_m: cenario_ativo = st.radio(t('strat'), [t('leg'), t('c1'), t('c2'), t('c3')], key="rad_strat")
+with tab_vendor:
+    st.markdown("<div class='section-title'>🔍 Benchmarking de OpEx (Tecnologia)</div>", unsafe_allow_html=True)
+    ai_vol_target = sessions_month * containment_mean
     
-    dados = sim['legado'] if "As-Is" in cenario_ativo or "Legacy" in cenario_ativo else sim['c1'] if "C1" in cenario_ativo else sim['c2'] if "C2" in cenario_ativo else sim['c3']
-    s_cli = 0 if "As-Is" in cenario_ativo or "Legacy" in cenario_ativo else dados['sav']
-    m_ativa = calc_margin(dados['ebitda'], dados['rev'])
-    m_legado = calc_margin(sim['legado']['ebitda'], sim['legado']['rev'])
+    plat_k = get_platform_monthly_cost({**params, "vendor": "Kore.AI"}, ai_vol_target)
+    plat_o = get_platform_monthly_cost({**params, "vendor": "Omilia"}, ai_vol_target)
+    plat_c = get_platform_monthly_cost({**params, "vendor": "Cresta"}, ai_vol_target)
+    llm_mensal_k = ai_vol_target * get_llm_cost_per_session({**params, "vendor": "Kore.AI"})
     
-    delta_ebitda = dados['ebitda'] - sim['legado']['ebitda']
-    
-    with col_h:
-        c1, c2, c3 = st.columns(3)
-        with c1: st.markdown(f"<div class='g-card'><div class='g-label'>{t('ebitda')}</div><div class='g-value'>${dados['ebitda']:,.0f}</div><div class='{'g-delta-positive' if delta_ebitda >=0 else 'g-delta-negative'}'>{'↑' if delta_ebitda>=0 else '↓'} ${abs(delta_ebitda):,.0f} {t('vs_leg')}</div></div>", unsafe_allow_html=True)
-        with c2: st.markdown(f"<div class='g-card'><div class='g-label'>{t('margin')}</div><div class='g-value'>{m_ativa:.1f}%</div><div class='g-delta-neutral'>{m_ativa - m_legado:+.1f} p.p. {t('vs_leg')}</div></div>", unsafe_allow_html=True)
-        with c3: st.markdown(f"<div class='g-card'><div class='g-label'>{t('sav')}</div><div class='g-value'>${s_cli:,.0f}</div><div class='{'g-delta-positive' if s_cli >=0 else 'g-delta-negative'}'>{'↑' if s_cli>=0 else '↓'} {t('cash')}</div></div>", unsafe_allow_html=True)
-        
-    col_g, col_t = st.columns([1.5, 1])
-    with col_g:
-        fig = go.Figure()
-        cores = ["#dadce0", "#1a73e8" if "C1" in cenario_ativo else "#dadce0", "#fbbc04" if "C2" in cenario_ativo else "#dadce0", "#34a853" if "C3" in cenario_ativo else "#dadce0"]
-        fig.add_trace(go.Bar(x=['As-Is', 'C1', 'C2', 'C3'], y=[sim['legado']['ebitda'], sim['c1']['ebitda'], sim['c2']['ebitda'], sim['c3']['ebitda']], marker_color=cores))
-        fig.update_layout(title=t('chart_title'), height=320, plot_bgcolor='rgba(0,0,0,0)', font=dict(family="Roboto, sans-serif", color="#5f6368"))
-        st.plotly_chart(fig, use_container_width=True)
-    with col_t:
-        st.markdown(f"<div class='g-label'>{t('dre_res')}</div>", unsafe_allow_html=True)
-        dre_df = pd.DataFrame({"Rubrica": [t('rev'), t('cost'), t('profit'), t('cli_sav')], "Valor": [f"${dados['rev']:,.0f}", f"${dados['rev'] - dados['ebitda']:,.0f}", f"${dados['ebitda']:,.0f}", f"${s_cli:,.0f}"]})
-        st.dataframe(dre_df, hide_index=True)
+    vcol1, vcol2, vcol3 = st.columns(3)
+    with vcol1: st.markdown(f"<div class='g-card'><div class='g-label'>Kore.AI</div><div class='g-value'>${(plat_k + llm_mensal_k):,.2f}</div><div class='g-sub'>Plataforma: ${plat_k:,.0f} | LLM: ${llm_mensal_k:,.0f}</div></div>", unsafe_allow_html=True)
+    with vcol2: st.markdown(f"<div class='g-card'><div class='g-label'>Omilia</div><div class='g-value'>${plat_o:,.2f}</div><div class='g-sub'>Plataforma: ${plat_o:,.0f} | LLM: $0</div></div>", unsafe_allow_html=True)
+    with vcol3: st.markdown(f"<div class='g-card'><div class='g-label'>Cresta</div><div class='g-value'>${plat_c:,.2f}</div><div class='g-sub'>Plataforma: ${plat_c:,.0f} | LLM: $0</div></div>", unsafe_allow_html=True)
 
 # ==========================================
-# MÓDULO 5: COCKPIT DRE EXECUTIVE
+# MÓDULO 4: DASHBOARDS & RADAR CHART
+# ==========================================
+with tab_dash:
+    st.markdown("<div class='section-title'>🎯 Radar Estratégico de Decisão</div>", unsafe_allow_html=True)
+    
+    # QA FIX: Normalização segura contra valores negativos no gráfico polar
+    def norm(val, max_val): return max(0, (val / max_val * 100)) if max_val > 0 else 0
+    
+    max_ebitda = max(sim['c1']['ebitda'], sim['c2']['ebitda'], sim['c3']['ebitda'], 1)
+    max_sav = max(sim['c1']['sav'], sim['c2']['sav'], sim['c3']['sav'], 1)
+    custos = [sim['c1']['tech'], sim['c2']['tech'], sim['c3']['tech']]
+    min_cost = min(custos); max_cost = max(custos)
+    def eff(c): return 100 - ((c - min_cost) / (max_cost - min_cost) * 100) if max_cost > min_cost else 100
+
+    col_radar, col_kpi = st.columns([1.2, 1])
+    
+    with col_radar:
+        fig_radar = go.Figure()
+        categorias = [t('profit'), t('cli_sav'), t('capex_eff')]
+        
+        fig_radar.add_trace(go.Scatterpolar(r=[norm(sim['c1']['ebitda'], max_ebitda), norm(sim['c1']['sav'], max_sav), eff(sim['c1']['tech'])], theta=categorias, fill='toself', name='C1', line_color='#34a853'))
+        fig_radar.add_trace(go.Scatterpolar(r=[norm(sim['c2']['ebitda'], max_ebitda), norm(sim['c2']['sav'], max_sav), eff(sim['c2']['tech'])], theta=categorias, fill='toself', name='C2', line_color='#fbbc04'))
+        fig_radar.add_trace(go.Scatterpolar(r=[norm(sim['c3']['ebitda'], max_ebitda), norm(sim['c3']['sav'], max_sav), eff(sim['c3']['tech'])], theta=categorias, fill='toself', name='C3', line_color='#1a73e8'))
+        
+        fig_radar.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 100])), showlegend=True, margin=dict(t=30, b=30, l=30, r=30), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(family="Google Sans", color="#5f6368"))
+        st.plotly_chart(fig_radar, use_container_width=True)
+
+    with col_kpi:
+        cenario_ativo = st.selectbox(t('sel_kpi'), ["C1", "C2", "C3"], key="rad_strat")
+        dados = sim['c1'] if "C1" in cenario_ativo else sim['c2'] if "C2" in cenario_ativo else sim['c3']
+        m_ativa = calc_margin(dados['ebitda'], dados['rev'])
+        m_legado = calc_margin(sim['legado']['ebitda'], sim['legado']['rev'])
+        
+        st.markdown(f"<div class='g-card'><div class='g-label'>EBITDA (3Y)</div><div class='g-value'>${dados['ebitda']:,.0f}</div><div class='g-sub'><b>{m_ativa:.1f}%</b> Margin</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='g-card'><div class='g-label'>Net Savings</div><div class='g-value'>${dados['sav']:,.0f}</div><div class='g-sub'>Payback: M <b>{dados['payback'] if dados['payback']<=36 else 'N/A'}</b></div></div>", unsafe_allow_html=True)
+
+# ==========================================
+# MÓDULO 5: DRE COCKPIT
 # ==========================================
 with tab_dre:
-    st.markdown(f"<h3 style='color:#202124;'>🧮 {t('cockpit_title')}</h3>", unsafe_allow_html=True)
-    drill_cenario = st.selectbox(t('sel_cenario'), ["C1 (Completo)", "C2 (Gain-Share)", "C3 (SaaS Ticket)"], key="sel_drill")
-    k_drill = "c1" if "C1" in drill_cenario else "c2" if "C2" in drill_cenario else "c3"
-    d_drill = sim[k_drill]
+    st.markdown("<div class='section-title'>🧮 DRE Executiva Interativa</div>", unsafe_allow_html=True)
+    drill_cenario = st.radio(t('fin_cen'), ["C1", "C2", "C3"], horizontal=True, key="sel_drill")
+    d_drill = sim[drill_cenario.lower()]
     
-    cw1, cw2 = st.columns([1, 1.5])
+    cw1, cw2 = st.columns([1, 1.2])
     with cw1:
-        st.markdown(f"**{t('waterfall_title')}**")
+        st.markdown(f"**{t('wf_comp')}**")
         fig_wf = go.Figure(go.Waterfall(
-            name = "20", orientation = "v", measure = ["relative", "relative", "relative", "total"],
-            x = [t('rev'), t('op_labor'), t('op_tech'), t('profit')],
-            y = [d_drill['rev'], -d_drill['labor'], -d_drill['tech'], d_drill['ebitda']], textposition = "outside",
-            text = [f"${d_drill['rev']/1000:,.0f}k", f"-${d_drill['labor']/1000:,.0f}k", f"-${d_drill['tech']/1000:,.0f}k", f"${d_drill['ebitda']/1000:,.0f}k"],
-            connector = {"line":{"color":"rgb(63, 63, 63)"}},
-            decreasing = {"marker":{"color":"#ea4335"}}, increasing = {"marker":{"color":"#1a73e8"}}, totals = {"marker":{"color":"#34a853"}}
+            orientation = "v", measure = ["relative", "relative", "relative", "total"],
+            x = ['Rev', 'Labor', 'Tech', 'EBITDA'],
+            y = [d_drill['rev'], -d_drill['labor'], -d_drill['tech'], d_drill['ebitda']],
+            text = [f"${d_drill['rev']/1000:,.0f}k", f"(${d_drill['labor']/1000:,.0f}k)", f"(${d_drill['tech']/1000:,.0f}k)", f"${d_drill['ebitda']/1000:,.0f}k"], textposition = "outside",
+            decreasing = {"marker":{"color":"#ea4335"}}, increasing = {"marker":{"color":"#34a853"}}, totals = {"marker":{"color":"#1a73e8"}},
+            connector = {"line":{"color":"#e0e0e0"}}
         ))
-        fig_wf.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)', font=dict(family="Roboto, sans-serif"))
+        fig_wf.update_layout(height=380, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(family="Google Sans"))
+        fig_wf.update_yaxes(showgrid=True, gridcolor='#f1f3f4', zerolinecolor='#bdc1c6')
         st.plotly_chart(fig_wf, use_container_width=True)
         
     with cw2:
-        st.markdown(f"**{t('dre_full')}**")
-        def b_rows(ck):
-            d = sim[ck]
-            return [[f"{ck.upper()} - {t('rev')}", f"${d['rev_y'][0]:,.0f}", f"${d['rev_y'][1]:,.0f}", f"${d['rev_y'][2]:,.0f}", f"${d['rev']:,.0f}"],
-                    [f"{ck.upper()} - {t('op_labor')}", f"${d['labor_y'][0]:,.0f}", f"${d['labor_y'][1]:,.0f}", f"${d['labor_y'][2]:,.0f}", f"${d['labor']:,.0f}"],
-                    [f"{ck.upper()} - Cloud / Tech", f"${d['tech_y'][0]:,.0f}", f"${d['tech_y'][1]:,.0f}", f"${d['tech_y'][2]:,.0f}", f"${d['tech']:,.0f}"],
-                    [f"{ck.upper()} - {t('profit')}", f"${d['ebitda_y'][0]:,.0f}", f"${d['ebitda_y'][1]:,.0f}", f"${d['ebitda_y'][2]:,.0f}", f"${d['ebitda']:,.0f}"],
-                    [f"{ck.upper()} - {t('cli_sav')}", f"${d['sav_y'][0]:,.0f}", f"${d['sav_y'][1]:,.0f}", f"${d['sav_y'][2]:,.0f}", f"${d['sav']:,.0f}"]]
-        df_all = b_rows('c1') + b_rows('c2') + b_rows('c3')
-        st.dataframe(pd.DataFrame(df_all, columns=["Metric", "Year 1", "Year 2", "Year 3", "Total"]), use_container_width=True, hide_index=True)
+        st.markdown(f"**{t('mat_ana')}**")
+        # QA FIX: Prevenção contra ZeroDivisionError se a receita (rev) for muito baixa ou zero.
+        safe_rev = d_drill['rev'] if d_drill['rev'] > 0 else 1
+        df_dre = pd.DataFrame({
+            "Rubrica": ["Receita Total", "Custos Labor", "Custos Tech", "EBITDA Final", "Client Savings"],
+            "Ano 1": [d_drill['rev_y'][0], -d_drill['labor_y'][0], -d_drill['tech_y'][0], d_drill['ebitda_y'][0], d_drill['sav_y'][0]],
+            "Ano 2": [d_drill['rev_y'][1], -d_drill['labor_y'][1], -d_drill['tech_y'][1], d_drill['ebitda_y'][1], d_drill['sav_y'][1]],
+            "Ano 3": [d_drill['rev_y'][2], -d_drill['labor_y'][2], -d_drill['tech_y'][2], d_drill['ebitda_y'][2], d_drill['sav_y'][2]],
+            "Total": [d_drill['rev'], -d_drill['labor'], -d_drill['tech'], d_drill['ebitda'], d_drill['sav']],
+            "Margem": [100, (d_drill['labor']/safe_rev)*100, (d_drill['tech']/safe_rev)*100, calc_margin(d_drill['ebitda'], safe_rev), 0]
+        })
         
-        cx1, cx2 = st.columns(2)
-        with cx1:
-            oxl = io.BytesIO()
-            with pd.ExcelWriter(oxl, engine='xlsxwriter') as w: pd.DataFrame(df_all).to_excel(w, sheet_name='DRE', index=False)
-            st.download_button(t('down_xls'), data=oxl.getvalue(), file_name="DRE_Matrix.xlsx", mime="application/vnd.ms-excel", use_container_width=True)
-        with cx2:
-            def make_pdf():
-                p = FPDF(); p.add_page(); p.set_font("Arial", size=14, style='B'); p.cell(200, 10, "Executive Financial Cockpit", ln=True, align='C')
-                p.set_font("Arial", size=11); p.cell(200, 10, f"Vendor: {params['vendor']} | Volume: {params['sessions_month']} calls", ln=True)
-                return p.output(dest='S').encode('latin-1')
-            st.download_button(t('down_pdf'), data=make_pdf(), file_name="P_L_Summary.pdf", mime="application/pdf", use_container_width=True)
+        st.dataframe(
+            df_dre,
+            column_config={
+                "Rubrica": st.column_config.TextColumn("Rubrica", width="medium"),
+                "Ano 1": st.column_config.NumberColumn("Y1", format="$ %d"),
+                "Ano 2": st.column_config.NumberColumn("Y2", format="$ %d"),
+                "Ano 3": st.column_config.NumberColumn("Y3", format="$ %d"),
+                "Total": st.column_config.NumberColumn("Total", format="$ %d"),
+                "Margem": st.column_config.ProgressColumn("% Receita", format="%d%%", min_value=0, max_value=100)
+            }, hide_index=True, use_container_width=True
+        )
 
 # ==========================================
-# MÓDULO 6: AI ADVISOR (GENAI)
+# MÓDULO 6: GENAI ADVISOR
 # ==========================================
 with tab_advisor:
-    st.markdown(f"<h3 style='color:#202124;'>{t('adv_title')}</h3>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🤖 GenAI Deal Advisor</div>", unsafe_allow_html=True)
     
     if st.button(t('adv_btn'), type="primary", key="btn_genai"):
-        with st.spinner("🤖 Analisando arquitetura semântica e DRE..."):
-            time.sleep(1.5)
+        with st.status("🧠 Processing Deal Architecture...", expanded=True) as status:
+            time.sleep(0.6)
+            time.sleep(0.6)
+            time.sleep(0.8)
+            status.update(label="Análise Concluída!" if st.session_state.lang == 'pt' else "Analysis Complete!", state="complete", expanded=False)
             
-            ai_vol = params['sessions_month'] * params['containment_mean']
-            c3_eb = sim['c3']['ebitda']
-            is_pt = st.session_state.lang == 'pt'
+        ai_vol = params['sessions_month'] * params['containment_mean']
+        c3_eb = sim['c3']['ebitda']
+        c3_payback = sim['c3']['payback']
+        payback_str = f"Mês {c3_payback}" if c3_payback <= 36 else "Nunca (ROI Negativo)"
+        
+        if params['vendor'] == 'Kore.AI':
+            c_t2_only = (((params["input_tokens"] * params["cache_hit_rate"]) / 1e6 * params["t2_in_c"]) + ((params["input_tokens"] * (1.0 - params["cache_hit_rate"])) / 1e6 * params["t2_in_nc"]) + (params["output_tokens"] / 1e6 * params["t2_out"]))
+            llm_mensal_100_t2 = ai_vol * c_t2_only
+            llm_mensal_routed = ai_vol * get_llm_cost_per_session({**params, "vendor": "Kore.AI"})
+            economia_routing = (llm_mensal_100_t2 - llm_mensal_routed) * 36
+            net_exp_cost = params["k_exp_val"] * (1.0 - params["k_exp_desc"] / 100.0)
             
-            c3_payback = sim['c3']['payback']
-            pb_text_pt = f"mês {c3_payback}" if c3_payback <= 36 else "nunca (ROI Negativo)"
-            pb_text_en = f"month {c3_payback}" if c3_payback <= 36 else "never (Negative ROI)"
-            payback_str = pb_text_pt if is_pt else pb_text_en
-            
-            if params['vendor'] == 'Kore.AI':
-                c_t2_only = (((params["input_tokens"] * params["cache_hit_rate"]) / 1e6 * params["t2_in_c"]) +
-                             ((params["input_tokens"] * (1.0 - params["cache_hit_rate"])) / 1e6 * params["t2_in_nc"]) +
-                             (params["output_tokens"] / 1e6 * params["t2_out"]))
-                
-                llm_mensal_100_t2 = ai_vol * c_t2_only
-                llm_mensal_routed = ai_vol * get_llm_cost_per_session({**params, "vendor": "Kore.AI"})
-                economia_routing = (llm_mensal_100_t2 - llm_mensal_routed) * 36
-                
-                net_exp_cost = params["k_exp_val"] * (1.0 - params["k_exp_desc"] / 100.0)
-                
-                if is_pt:
-                    pitch = f"""
-                    #### 📊 Diagnóstico Estratégico (GenAI Analysis)
-                    
-                    Analisei a DRE consolidada e a arquitetura de Tokenomics proposta para **Kore.AI**.
-                    
-                    **1. Impacto do Roteamento Semântico (Semantic Routing):**
-                    Ao desviar {params['t1_split']*100:.0f}% das intenções mais simples para o modelo Tier 1 (Haiku/Flash), a operação **economiza ${economia_routing:,.0f}** em nuvem ao longo de 36 meses.
-                    
-                    **2. Avaliação de Setup (Expert Services):**
-                    A licença de Expert Services (com {params['k_exp_desc']:.0f}% de desconto) totaliza um CapEx de **${net_exp_cost:,.0f}** no Mês 1.
-                    
-                    **3. Recomendação Comercial (Otimizada para EBITDA):**
-                    Sugiro empurrar o **Cenário 3 (Outcome-Based)** para o cliente. 
-                    Cobrando ${params['outcome_price']:.2f} por ticket retido, o BPO garante um EBITDA projetado de **${c3_eb:,.0f}** (com payback do cliente no **{payback_str}**).
-                    """
-                else:
-                    pitch = f"""
-                    #### 📊 Strategic Diagnostic (GenAI Analysis)
-                    
-                    I analyzed the consolidated P&L and the proposed Tokenomics architecture for **Kore.AI**.
-                    
-                    **1. Impact of Semantic Routing:**
-                    By routing {params['t1_split']*100:.0f}% of simple intents to the Tier 1 model, the operation **saves ${economia_routing:,.0f}** in cloud costs over 36 months.
-                    
-                    **2. Setup Evaluation (Expert Services):**
-                    The Expert Services license (with {params['k_exp_desc']:.0f}% discount) totals a CapEx of **${net_exp_cost:,.0f}** in Month 1.
-                    
-                    **3. Commercial Recommendation (Optimized for EBITDA):**
-                    I suggest pitching **Scenario 3 (Outcome-Based)** to the client. 
-                    By charging ${params['outcome_price']:.2f} per retained ticket, the BPO ensures a projected EBITDA of **${c3_eb:,.0f}** (with client payback in **{payback_str}**).
-                    """
-            else:
-                if is_pt:
-                    pitch = f"""
-                    #### 📊 Diagnóstico Estratégico (GenAI Analysis)
-                    
-                    Analisei a DRE consolidada para a arquitetura **{params['vendor']}**.
-                    
-                    **1. Estrutura de Custos (Modelos Fechados):**
-                    Para o fornecedor selecionado, os custos de processamento LLM já estão encapsulados no licenciamento da plataforma. Não há flutuação de *Tokenomics* afetando diretamente o OpEx Tech do BPO. 
-                    
-                    **2. Recomendação Comercial:**
-                    Avançar com o **Cenário 3 (Outcome-Based)**. Cobrando ${params['outcome_price']:.2f} por ticket retido, a operação prevê um EBITDA de **${c3_eb:,.0f}** (payback no **{payback_str}**).
-                    """
-                else:
-                    pitch = f"""
-                    #### 📊 Strategic Diagnostic (GenAI Analysis)
-                    
-                    I analyzed the consolidated P&L for the **{params['vendor']}** architecture.
-                    
-                    **1. Cost Structure (Closed Models):**
-                    For the selected vendor, LLM processing costs are already encapsulated in the platform licensing. There is no *Tokenomics* fluctuation directly affecting the BPO's Tech OpEx. 
-                    
-                    **2. Commercial Recommendation:**
-                    Proceed with **Scenario 3 (Outcome-Based)**. By charging ${params['outcome_price']:.2f} per retained ticket, the operation projects an EBITDA of **${c3_eb:,.0f}** (payback in **{payback_str}**).
-                    """
+            st.session_state.genai_impact = f"<b>Efeito Semantic Routing:</b> Desviar {params['t1_split']*100:.0f}% do tráfego para modelos rápidos gerou uma economia em nuvem de <b>${economia_routing:,.0f}</b> em 3 anos. O Setup de Expert Services consome <b>${net_exp_cost:,.0f}</b> no D0."
+            st.session_state.genai_pitch = f"“Avançaremos com o modelo de Outcome-Based (C3). Cobrando ${params['outcome_price']:.2f} por ticket retido, garantimos um EBITDA interno de ${c3_eb:,.0f}, blindando o cliente de oscilações tecnológicas de GenAI. O payback dele ocorre no {payback_str}.”"
+        else:
+            st.session_state.genai_impact = f"<b>Previsibilidade Máxima:</b> Na arquitetura {params['vendor']}, os custos de LLM já estão blindados no licenciamento. A operação não sofre variação de faturamento de Tokenomics no OpEx."
+            st.session_state.genai_pitch = f"“Apresentaremos o Cenário Outcome-Based (C3). A ${params['outcome_price']:.2f} por ticket, garantimos um EBITDA interno de ${c3_eb:,.0f}. O cliente recupera o investimento no {payback_str}.”"
 
-            attn_title = "**Pontos de Atenção (Gargalos):**\n" if is_pt else "**Attention Points (Bottlenecks):**\n"
-            pitch += f"\n{attn_title}"
-            
-            if params['implementation_months'] > 4:
-                pitch += f"- **Atraso de ROI:** A Curva J está longa ({params['implementation_months']} meses).\n" if is_pt else f"- **ROI Delay:** The J-Curve is too long ({params['implementation_months']} months).\n"
-            if c3_payback > 36:
-                pitch += f"- **Alerta Comercial:** O payback não ocorre dentro da janela de 36 meses.\n" if is_pt else f"- **Commercial Alert:** Payback does not occur within the 36-month window.\n"
-                
-            st.session_state.genai_pitch = pitch
-            
+        alerts = []
+        if params['implementation_months'] > 4: alerts.append(f"Atraso de ROI: Curva J longa ({params['implementation_months']} meses). Fatie o Go-Live.")
+        if params['cache_hit_rate'] < 0.8 and params['vendor'] == 'Kore.AI': alerts.append(f"Vazamento de OpEx: Cache de {params['cache_hit_rate']*100:.0f}% está baixo. Otimize os Prompts para >80%.")
+        if c3_payback > 36: alerts.append("O payback do cliente estourou o contrato (>36m). O Setup Fee está sufocando o business case.")
+        st.session_state.genai_alerts = "<br>".join([f"⚠️ {a}" for a in alerts]) if alerts else "✅ Deal perfeitamente equilibrado. Sem alertas operacionais."
+
     if st.session_state.genai_pitch:
-        st.markdown(f"<div class='g-pitch-box' style='background-color:#f1f8ff; border-left-color:#1a73e8;'>{st.session_state.genai_pitch}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='ai-impact'>{st.session_state.genai_impact}</div>", unsafe_allow_html=True)
+        if "⚠️" in st.session_state.genai_alerts: st.markdown(f"<div class='ai-alert'>{st.session_state.genai_alerts}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='ai-pitch'><b>Pitch Sugerido:</b><br>{st.session_state.genai_pitch}</div>", unsafe_allow_html=True)
     else:
-        st.info(t('adv_warn'))
+        st.info("💡 " + t('adv_warn'))
